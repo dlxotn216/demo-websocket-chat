@@ -29,7 +29,8 @@
         </div>
     </div>
     <ul class="list-group">
-        <li class="list-group-item list-group-item-action" v-for="item in chatrooms" v-bind:key="item.roomId" v-on:click="enterRoom(item.roomId)">
+        <li class="list-group-item list-group-item-action" v-for="item in chatrooms" v-bind:key="item.roomId"
+            v-on:click="enterRoom(item.roomId)">
             {{item.name}}
         </li>
     </ul>
@@ -41,41 +42,43 @@
     var vm = new Vue({
         el: '#app',
         data: {
-            room_name : '',
-            chatrooms: [
-            ]
+            room_name: '',
+            chatrooms: []
         },
         created() {
             this.findAllRoom();
         },
         methods: {
-            findAllRoom: function() {
-                axios.get('/chat/rooms').then(response => { this.chatrooms = response.data; });
+            findAllRoom: function () {
+                axios.get('/chat/rooms').then(response => {
+                    this.chatrooms = response.data;
+                });
             },
-            createRoom: function() {
-                if("" === this.room_name) {
+            createRoom: function () {
+                if ("" === this.room_name) {
                     alert("방 제목을 입력해 주십시요.");
                     return;
                 } else {
                     var params = new URLSearchParams();
-                    params.append("name",this.room_name);
+                    params.append("name", this.room_name);
                     axios.post('/chat/room', params)
-                            .then(
-                                    response => {
-                        alert(response.data.name+"방 개설에 성공하였습니다.")
-                    this.room_name = '';
-                    this.findAllRoom();
-                }
-                )
-                .catch( response => { alert("채팅방 개설에 실패하였습니다."); } );
+                            .then(response => {
+                                        alert(response.data.name + "방 개설에 성공하였습니다.")
+                                        this.room_name = '';
+                                        this.findAllRoom();
+                                    }
+                            )
+                            .catch(response => {
+                                alert("채팅방 개설에 실패하였습니다.");
+                            });
                 }
             },
-            enterRoom: function(roomId) {
+            enterRoom: function (roomId) {
                 var sender = prompt('대화명을 입력해 주세요.');
-                if(sender != "") {
-                    localStorage.setItem('wschat.sender',sender);
-                    localStorage.setItem('wschat.roomId',roomId);
-                    location.href="/chat/room/enter/"+roomId;
+                if (sender != "") {
+                    sessionStorage.setItem('wschat.sender', sender);
+                    sessionStorage.setItem('wschat.roomId', roomId);
+                    location.href = "/chat/room/enter/" + roomId;
                 }
             }
         }
