@@ -75,7 +75,7 @@
             },
             enterRoom: function (roomId) {
                 var sender = prompt('대화명을 입력해 주세요.');
-                if (sender != "") {
+                if (sender) {
                     sessionStorage.setItem('wschat.sender', sender);
                     sessionStorage.setItem('wschat.roomId', roomId);
                     location.href = "/chat/room/enter/" + roomId;

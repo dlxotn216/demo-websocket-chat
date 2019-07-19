@@ -59,12 +59,19 @@
         created() {
             this.roomId = sessionStorage.getItem('wschat.roomId');
             this.sender = sessionStorage.getItem('wschat.sender');
+            this.init();
             this.findRoom();
         },
         methods: {
-            findRoom: function () {
+            init: function () {
                 axios.get('/chat/room/' + this.roomId).then(response => {
                     this.room = response.data;
+                });
+            },
+            findRoom: function () {
+                axios.get('/chat/room/' + this.roomId + '/messages').then(response => {
+                    console.log(response.data);
+                    this.messages = response.data;
                 });
             },
             sendMessage: function () {

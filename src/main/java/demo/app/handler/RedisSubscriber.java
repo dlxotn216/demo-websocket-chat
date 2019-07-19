@@ -23,13 +23,14 @@ public class RedisSubscriber implements MessageListener {
     private final ObjectMapper objectMapper;
     private final RedisTemplate redisTemplate;
     private final SimpMessageSendingOperations messageSendingOperations;
+
     @Override
     public void onMessage(Message message, @Nullable byte[] bytes) {
         try {
             String publishedMessage = (String) this.redisTemplate.getStringSerializer().deserialize(message.getBody());
             ChatMessage chatMessage = this.objectMapper.readValue(publishedMessage, ChatMessage.class);
-            this.messageSendingOperations.convertAndSend("/sub/chat/room/"+chatMessage.getRoomId(), chatMessage);
-        } catch (IOException e){
+            this.messageSendingOperations.convertAndSend("/sub/chat/room/" + chatMessage.getRoomId(), chatMessage);
+        } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
