@@ -63,11 +63,9 @@
                     params.append("name", this.room_name);
                     axios.post('/chat/room', params)
                             .then(response => {
-                                        alert(response.data.name + "방 개설에 성공하였습니다.")
-                                        this.room_name = '';
-                                        this.findAllRoom();
-                                    }
-                            )
+                                this.room_name = '';
+                                this.findAllRoom();
+                            })
                             .catch(response => {
                                 alert("채팅방 개설에 실패하였습니다.");
                             });
