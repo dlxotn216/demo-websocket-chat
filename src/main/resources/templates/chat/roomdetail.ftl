@@ -23,15 +23,24 @@
         <div class="input-group-prepend">
             <label class="input-group-text">내용</label>
         </div>
-        <input type="text" class="form-control" v-model="message" v-on:keypress.enter="sendMessage">
+        <input type="text" class="form-control" ref="message" v-model="message" v-on:keypress.enter="sendMessage">
         <div class="input-group-append">
             <button class="btn btn-primary" type="button" @click="sendMessage">보내기</button>
         </div>
     </div>
     <ul class="list-group">
-        <li class="list-group-item" v-for="message in messages">
-            {{message.sender}} - {{message.message}}</a>
-        </li>
+        <template v-for="message in messages">
+            <template v-if="message.sender === sender">
+                <li class="list-group-item" style="text-align: right">
+                    {{message.message}}
+                </li>
+            </template>
+            <template v-else>
+                <li class="list-group-item">
+                    [{{message.sender}}] - {{message.message}}
+                </li>
+            </template>
+        </template>
     </ul>
     <div></div>
 </div>
@@ -75,6 +84,10 @@
                 });
             },
             sendMessage: function () {
+                if (!this.message) {
+                    return;
+                }
+
                 ws.send("/pub/chat/message", {}, JSON.stringify({
                     type: 'TEXT',
                     roomId: this.roomId,
@@ -82,13 +95,19 @@
                     message: this.message
                 }));
                 this.message = '';
+                this.$refs.message.$el.focus();
             },
             recvMessage: function (recv) {
                 this.messages.unshift({
                     "type": recv.type,
-                    "sender": recv.type == 'ENTER' ? '[알림]' : recv.sender,
+                    "sender": recv.sender,
                     "message": recv.message
                 })
+            },
+            getLineStyles: function (message) {
+                return this.sender === message.sender
+                        ? 'text-align: right'
+                        : 'text-align: left';
             }
         }
     });

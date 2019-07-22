@@ -24,8 +24,7 @@ public class ChatController {
     public void message(ChatMessage message) {
         if (message.isEnterRequest()) {
             this.chatRoomRepository.enterChatRoom(message.getRoomId());
-            message = new ChatMessage(message.getType(), message.getRoomId(),
-                                      message.getSender()+" entered", message.getSender());
+            return;
         }
         this.redisPublisher.pubilsh(this.chatRoomRepository.getTopic(message.getRoomId()), message);
         // Websocket에 발행된 메시지를 redis로 발행한다(publish)
