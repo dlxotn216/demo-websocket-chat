@@ -18,11 +18,13 @@ public class ChatMessage implements Serializable{
     private String roomId;
     private String message;
     private String sender;
+    private String downloadPath;
 
     public boolean isEnterRequest() {
         return type == Type.ENTER;
     }
     public enum Type {
+        FILE,
         ENTER,
         TEXT;
     }

@@ -23,7 +23,6 @@ public class ChatViewController {
     @GetMapping("/chat/room/enter/{roomId}")
     public String roomDetail(Model model, @PathVariable String roomId) {
         model.addAttribute("roomId", roomId);
-        model.addAttribute("messages", this.chatMessageRepository.findByChatRoomId(roomId));
         return "/chat/roomdetail";
     }
 

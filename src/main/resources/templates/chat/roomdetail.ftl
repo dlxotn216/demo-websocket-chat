@@ -20,24 +20,49 @@
         <h2>{{room.name}}</h2>
     </div>
     <div class="input-group">
-        <div class="input-group-prepend">
-            <label class="input-group-text">내용</label>
-        </div>
-        <input type="text" class="form-control" ref="message" v-model="message" v-on:keypress.enter="sendMessage">
+        <template v-if="imageMode">
+            <template v-if="!image">
+                <input type="file" name="image" class="form-control" @change="onFileChange">
+            </template>
+            <template v-else>
+                <img :src="image"/>
+                <button @click="removeImage">Remove image</button>
+            </template>
+        </template>
+        <template v-else>
+            <div class="input-group-prepend">
+                <label class="input-group-text">내용</label>
+            </div>
+            <input type="text" class="form-control" ref="message" v-model="message" v-on:keypress.enter="sendMessage">
+        </template>
         <div class="input-group-append">
-            <button class="btn btn-primary" type="button" @click="sendMessage">보내기</button>
+            <button v-if="imageMode" class="btn btn-primary" type="button" @click="sendImage">업로드</button>
+            <button v-if="!imageMode" class="btn btn-primary" type="button" @click="sendMessage">보내기</button>
+            <button v-if="!imageMode" class="btn btn-primary" type="button" @click="toggleImage">이미지</button>
         </div>
     </div>
     <ul class="list-group">
         <template v-for="message in messages">
             <template v-if="message.sender === sender">
                 <li class="list-group-item" style="text-align: right">
-                    {{message.message}}
+                    <template v-if="message.type === 'FILE'">
+                        <a>{{message.message}}</a> <br />
+                        <img v-bind:src="imageSrc(message)"/>
+                    </template>
+                    <template v-else>
+                        {{message.message}}
+                    </template>
                 </li>
             </template>
             <template v-else>
                 <li class="list-group-item">
-                    [{{message.sender}}] - {{message.message}}
+                    <template v-if="message.type === 'FILE'">
+                        <a>[{{message.sender}}] - {{message.message}}</a> <br />
+                        <img v-bind:src="imageSrc(message)"/>
+                    </template>
+                    <template v-else>
+                        [{{message.sender}}] - {{message.message}}
+                    </template>
                 </li>
             </template>
         </template>
@@ -52,18 +77,21 @@
 <script>
     //alert(document.title);
     // websocket &amp; stomp initialize
-    var sock = new SockJS("/ws-stomp");
-    var ws = Stomp.over(sock);
-    var reconnect = 0;
+    const sock = new SockJS("/ws-stomp");
+    const ws = Stomp.over(sock);
+    const reconnect = 0;
     // vue.js
-    var vm = new Vue({
+    const vm = new Vue({
         el: '#app',
         data: {
             roomId: '',
             room: {},
             sender: '',
             message: '',
-            messages: []
+            messages: [],
+            image: '',
+            file: '',
+            imageMode: false
         },
         created() {
             this.roomId = sessionStorage.getItem('wschat.roomId');
@@ -83,12 +111,36 @@
                     this.messages = response.data;
                 });
             },
+            toggleImage: function () {
+                this.imageMode = !this.imageMode;
+            },
+            onFileChange(e) {
+                const files = e.target.files || e.dataTransfer.files;
+                if (!files.length)
+                    return;
+
+                this.file = files[0];
+                this.createImage(files[0]);
+            },
+            createImage(file) {
+                const image = new Image();
+                const reader = new FileReader();
+                const vm = this;
+
+                reader.onload = (e) => {
+                    vm.image = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            },
+            removeImage: function (e) {
+                this.image = '';
+            },
             sendMessage: function () {
                 if (!this.message) {
                     return;
                 }
 
-                ws.send("/pub/chat/message", {}, JSON.stringify({
+                this.publishMessage(JSON.stringify({
                     type: 'TEXT',
                     roomId: this.roomId,
                     sender: this.sender,
@@ -97,11 +149,51 @@
                 this.message = '';
                 this.$refs.message.$el.focus();
             },
+            sendImage: function () {
+                if (!this.file) {
+                    return;
+                }
+
+                const URL = '/uploads';
+                let data = new FormData();
+                data.append('image', this.file);
+
+                let config = {
+                    header: {
+                        'Content-Type': 'image/png'
+                    }
+                };
+
+                axios.post(
+                        URL,
+                        data,
+                        config
+                ).then(response => {
+                    console.log('image upload response > ', response);
+                    this.removeImage();
+                    this.toggleImage();
+
+                    this.publishMessage(JSON.stringify({
+                        type: 'FILE',
+                        roomId: this.roomId,
+                        sender: this.sender,
+                        message: response.data.fileName,
+                        downloadPath: response.data.fileId
+                    }));
+                })
+            },
+            publishMessage: function (message) {
+                ws.send("/pub/chat/message", {}, message);
+            },
+            imageSrc: function (message) {
+                return "/downloads/" + message.downloadPath;
+            },
             recvMessage: function (recv) {
                 this.messages.unshift({
                     "type": recv.type,
                     "sender": recv.sender,
-                    "message": recv.message
+                    "message": recv.message,
+                    "downloadPath": recv.downloadPath
                 })
             },
             getLineStyles: function (message) {
@@ -116,7 +208,7 @@
         // pub/sub event
         ws.connect({}, function (frame) {
             ws.subscribe("/sub/chat/room/" + vm.$data.roomId, function (message) {
-                var recv = JSON.parse(message.body);
+                const recv = JSON.parse(message.body);
                 vm.recvMessage(recv);
             });
             ws.send("/pub/chat/message", {}, JSON.stringify({
